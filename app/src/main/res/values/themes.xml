@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- 啟動畫面本身：純黑，不放圖示 -->
+    <style name="Theme.TryIt.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#000000</item>
+        <item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+        <item name="postSplashScreenTheme">@style/Theme.TryIt</item>
+    </style>
+
+    <!-- 啟動畫面結束後 App 實際使用的主題（原本那個，沒改） -->
+    <style name="Theme.TryIt" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

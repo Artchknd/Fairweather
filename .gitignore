@@ -1,0 +1,32 @@
+*.iml
+.gradle/
+/local.properties
+local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+
+# Signing and secrets
+*.jks
+*.keystore
+keystore.properties
+google-services.json
+
+# Build outputs
+*.apk
+*.aab
+/app/release/
+# Added for open-source release
+build/
+.kotlin/
+.idea/
+/app/debug/
+*.log
