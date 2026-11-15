@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_description">Displays current weather and 3-period forecast for your location</string>
+    <string name="widget_action_refresh">Refresh weather</string>
+    <string name="widget_empty_title">Tap to open Fairweather</string>
+    <string name="widget_empty_desc">Load weather info for your current location</string>
+    <string name="widget_updating">Updating…</string>
+    <string name="widget_updated_at">Updated %1$s</string>
+    <string name="widget_range_subtitle">Rain %1$s%% · %2$s</string>
+</resources>

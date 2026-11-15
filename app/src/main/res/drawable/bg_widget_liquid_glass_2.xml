@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 外層斜角鏡面高光框線 -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="28dp" />
+            <gradient
+                android:angle="315"
+                android:startColor="#78FFFFFF"
+                android:centerColor="#22FFFFFF"
+                android:endColor="#4DFFFFFF" />
+        </shape>
+    </item>
+    <!-- 內層半透明深色玻璃 -->
+    <item
+        android:top="1dp"
+        android:bottom="1dp"
+        android:left="1dp"
+        android:right="1dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="27dp" />
+            <gradient
+                android:angle="315"
+                android:startColor="#AD141E30"
+                android:centerColor="#8F0F172A"
+                android:endColor="#9E1B283E" />
+        </shape>
+    </item>
+</layer-list>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_description">顯示所在地即時天氣與未來三個時段預報</string>
+    <string name="widget_action_refresh">重新整理天氣</string>
+    <string name="widget_empty_title">點擊開啟 Fairweather</string>
+    <string name="widget_empty_desc">載入目前位置的天氣資訊</string>
+    <string name="widget_updating">更新中...</string>
+    <string name="widget_updated_at">更新 %1$s</string>
+    <string name="widget_range_subtitle">降雨 %1$s%% · %2$s</string>
+</resources>

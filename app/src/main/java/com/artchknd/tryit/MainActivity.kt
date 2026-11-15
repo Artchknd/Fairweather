@@ -54,6 +54,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             val vm: WeatherViewModel = viewModel()
             val state by vm.state.collectAsStateWithLifecycle()
+            LaunchedEffect(state) {
+                com.artchknd.tryit.widget.FairweatherWidgetProvider.syncFromApp(this@MainActivity, state)
+            }
             val searchState by vm.search.collectAsStateWithLifecycle()
             val pinned by vm.pinned.collectAsStateWithLifecycle()
             // 開機頁的狀態：introDone 一旦成立就鎖定（旋轉後不重播），其餘只在這次開機流程內有效

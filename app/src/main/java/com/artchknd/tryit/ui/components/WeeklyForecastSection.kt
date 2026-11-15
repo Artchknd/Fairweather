@@ -122,7 +122,10 @@ private fun WeeklyForecastRow(
             WeatherIcon(
                 condition = item.condition,
                 tint = colors.iconTint,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(22.dp),
+                conditionCode = item.conditionCode,
+                wmoCode = item.wmoCode,
+                isDay = true
             )
             Spacer(Modifier.width(8.dp))
             Text(
@@ -151,7 +154,6 @@ private fun WeeklyForecastRow(
             modifier = Modifier.width(38.dp)
         )
 
-        // 固定 UV 欄位寬度：uvIndex 為 null 時不顯示文字但保留對齊空間，防止版面跳動
         Box(
             modifier = Modifier.width(46.dp),
             contentAlignment = Alignment.CenterEnd
