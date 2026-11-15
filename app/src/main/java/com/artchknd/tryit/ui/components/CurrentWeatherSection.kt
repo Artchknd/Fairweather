@@ -16,12 +16,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.artchknd.tryit.R
 import com.artchknd.tryit.ui.theme.FairweatherTheme
+import com.artchknd.tryit.weather.WeatherText
 import com.artchknd.tryit.weather.WeatherUiState
 
 @Composable
@@ -32,7 +35,8 @@ fun CurrentWeatherHeader(
     modifier: Modifier = Modifier
 ) {
     val colors = FairweatherTheme.colors
-    val locationText = formatHeaderLocation(city = city, district = district)
+    val cleanCity = city.trim().ifEmpty { "--" }
+    val cleanDistrict = district.trim()
 
     Row(
         modifier = modifier
@@ -41,34 +45,47 @@ fun CurrentWeatherHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .weight(1f)
                 .padding(end = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            Text(
-                text = locationText,
-                color = colors.textPrimary,
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.4.sp,
-                maxLines = 1,
-                modifier = Modifier
-                    .weight(1f, fill = false)
-                    .basicMarquee(
-                        iterations = Int.MAX_VALUE,
-                        repeatDelayMillis = 1600,
-                        initialDelayMillis = 1000,
-                        velocity = 36.dp
-                    )
-            )
-            if (isLoading) {
-                Spacer(Modifier.width(10.dp))
-                CircularProgressIndicator(
-                    modifier = Modifier.size(16.dp),
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = cleanCity,
                     color = colors.textPrimary,
-                    strokeWidth = 2.dp
+                    fontSize = 30.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.4.sp,
+                    maxLines = 1,
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .basicMarquee(
+                            iterations = Int.MAX_VALUE,
+                            repeatDelayMillis = 1600,
+                            initialDelayMillis = 1000,
+                            velocity = 36.dp
+                        )
+                )
+                if (isLoading) {
+                    Spacer(Modifier.width(10.dp))
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        color = colors.textPrimary,
+                        strokeWidth = 2.dp
+                    )
+                }
+            }
+
+            if (cleanDistrict.isNotEmpty()) {
+                Text(
+                    text = cleanDistrict,
+                    color = colors.textSecondary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -84,10 +101,14 @@ fun CurrentWeatherSection(
     modifier: Modifier = Modifier
 ) {
     val colors = FairweatherTheme.colors
+    val context = LocalContext.current
     val minStr = state.minTemp?.toString() ?: "--"
     val maxStr = state.maxTemp?.toString() ?: "--"
     val rainStr = state.rainChance?.toString() ?: "--"
-    val comfort = state.slots.firstOrNull()?.comfort.orEmpty()
+    val rawComfort = state.slots.firstOrNull()?.comfort.orEmpty()
+    val comfort = if (rawComfort.isNotBlank()) WeatherText.comfort(context, rawComfort) else ""
+    val conditionText = WeatherText.condition(context, state.conditionCode, state.condition)
+        .ifBlank { "--" }
 
     Column(
         modifier = modifier
@@ -101,32 +122,53 @@ fun CurrentWeatherSection(
             WeatherIcon(
                 condition = state.condition,
                 tint = colors.iconTint,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(32.dp),
+                conditionCode = state.conditionCode,
+                wmoCode = state.wmoCode,
+                isDay = state.isDay
             )
             Text(
-                text = state.condition.ifBlank { "--" },
+                text = conditionText,
                 color = colors.textSecondary,
                 fontSize = 18.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
 
         Spacer(Modifier.height(4.dp))
 
         if (state.tempNow != null) {
-            Text(
-                text = "${state.tempNow}°",
-                color = colors.textPrimary,
-                fontSize = 62.sp,
-                fontWeight = FontWeight.Bold
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "${state.tempNow}°",
+                    color = colors.textPrimary,
+                    fontSize = 62.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                if (state.feelsLike != null) {
+                    Text(
+                        text = stringResource(R.string.weather_feels_like, state.feelsLike),
+                        color = colors.textSecondary,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                }
+            }
+            val summaryText = stringResource(
+                R.string.weather_temp_rain_summary,
+                maxStr,
+                minStr,
+                rainStr
             )
+            val fullSummary = if (comfort.isNotBlank()) "$summaryText  ·  $comfort" else summaryText
             Text(
-                text = stringResource(
-                    R.string.weather_temp_rain_summary,
-                    maxStr,
-                    minStr,
-                    rainStr
-                ),
+                text = fullSummary,
                 color = colors.textSecondary,
                 fontSize = 14.sp
             )
@@ -177,16 +219,5 @@ fun CurrentWeatherSection(
                 )
             }
         }
-    }
-}
-
-private fun formatHeaderLocation(city: String, district: String): String {
-    val cleanCity = city.trim()
-    val cleanDistrict = district.trim()
-    return when {
-        cleanCity.isNotEmpty() && cleanDistrict.isNotEmpty() -> "$cleanCity $cleanDistrict"
-        cleanCity.isNotEmpty() -> cleanCity
-        cleanDistrict.isNotEmpty() -> cleanDistrict
-        else -> "--"
     }
 }

@@ -25,7 +25,8 @@ import kotlin.math.cos
 
 sealed interface LocationResult {
     data class Success(val county: String, val district: String) : LocationResult
-    data object OutsideTaiwan : LocationResult
+    // 不在台灣：帶著座標交給全球資料層
+    data class OutsideTaiwan(val latitude: Double, val longitude: Double) : LocationResult
     data object PermissionDenied : LocationResult
     data object LocationUnavailable : LocationResult
     data object LookupFailed : LocationResult
@@ -48,7 +49,7 @@ class LocationResolver(context: Context) {
 
         val location = fetchLocation(hasFine) ?: return LocationResult.LocationUnavailable
         if (!isInsideTaiwanBounds(location.latitude, location.longitude)) {
-            return LocationResult.OutsideTaiwan
+            return LocationResult.OutsideTaiwan(location.latitude, location.longitude)
         }
         return lookupAdministrativeArea(location.latitude, location.longitude)
     }
@@ -118,7 +119,7 @@ class LocationResolver(context: Context) {
         return when {
             found != null -> LocationResult.Success(found.county, found.district)
             nearby.any { it is PointResult.Failed } -> LocationResult.LookupFailed
-            else -> LocationResult.OutsideTaiwan
+            else -> LocationResult.OutsideTaiwan(lat, lon)
         }
     }
 

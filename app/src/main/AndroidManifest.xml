@@ -29,6 +29,19 @@
             </intent-filter>
         </activity>
 
+        <receiver
+            android:name=".widget.FairweatherWidgetProvider"
+            android:exported="false"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.artchknd.tryit.widget.ACTION_REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/fairweather_widget_info" />
+        </receiver>
+
     </application>
 
 </manifest>

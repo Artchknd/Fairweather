@@ -38,6 +38,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.artchknd.tryit.R
@@ -72,7 +73,6 @@ fun SearchSection(
             fontWeight = FontWeight.Bold
         )
 
-        // 頂部固定搜尋列：左側液態玻璃輸入框 + 右側獨立圓形放大鏡按鈕
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -99,7 +99,8 @@ fun SearchSection(
                                 text = stringResource(R.string.search_input_placeholder),
                                 color = colors.textMuted,
                                 fontSize = 15.sp,
-                                maxLines = 1
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                         BasicTextField(
@@ -157,7 +158,6 @@ fun SearchSection(
             }
         }
 
-        // 搜尋結果區（純排版，無玻璃框包字）
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -292,7 +292,8 @@ private fun SearchResultRow(
                 color = colors.textPrimary,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -328,7 +329,8 @@ private fun SearchResultRow(
                     ),
                     color = colors.textMuted,
                     fontSize = 12.sp,
-                    maxLines = 1
+                    maxLines = 1,
+                    softWrap = false
                 )
             }
         }

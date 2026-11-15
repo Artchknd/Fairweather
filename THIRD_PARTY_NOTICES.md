@@ -1,14 +1,16 @@
-# Third-Party Notices
+Third-Party Software and Data Notices
 
-## AndroidLiquidGlass
+================================================================================
+1. AndroidLiquidGlass
+================================================================================
+Project: Kyant0/AndroidLiquidGlass
+Repository: https://github.com/Kyant0/AndroidLiquidGlass
+License: Apache License, Version 2.0
+Usage: 未修改，僅作為依賴使用（使用於導覽列與介面液態玻璃效果）
+Copyright: Copyright 2025 Kyant
 
-* **Project**: Kyant0/AndroidLiquidGlass
-* **Repository**: https://github.com/Kyant0/AndroidLiquidGlass
-* **License**: Apache License, Version 2.0
-* **Usage**: Unmodified; used solely as a dependency (for the navigation bar and liquid glass UI effects).
-* **Copyright**: Copyright 2025 Kyant
+--------------------------------------------------------------------------------
 
-```text
 
                                  Apache License
                            Version 2.0, January 2004
@@ -142,7 +144,7 @@
    5. Submission of Contributions. Unless You explicitly state otherwise,
       any Contribution intentionally submitted for inclusion in the Work
       by You to the Licensor shall be under the terms and conditions of
-      this License, without any additional terms and conditions.
+      this License, without any additional terms or conditions.
       Notwithstanding the above, nothing herein shall supersede or modify
       the terms of any separate license agreement you may have executed
       with Licensor regarding such Contributions.
@@ -200,3 +202,33 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+================================================================================
+2. Open-Meteo
+================================================================================
+Name: Open-Meteo
+Usage: Weather forecasts and place search for locations outside Taiwan
+Website: https://open-meteo.com/
+Credit: Weather data by Open-Meteo.com (https://open-meteo.com/)
+License (weather data): Creative Commons Attribution 4.0 International (CC BY 4.0)
+    https://creativecommons.org/licenses/by/4.0/
+    https://open-meteo.com/en/licence
+License (geocoding data): Creative Commons Attribution-NonCommercial 4.0
+    International (CC BY-NC 4.0)
+Terms: https://open-meteo.com/en/terms
+    Open-Meteo's free API is for open-source and non-commercial use, under
+    fair-use limits. Commercial use requires a commercial plan from Open-Meteo.
+
+Changes: The data is processed for display. Values are rounded, and weather
+codes are converted to localized text, icons and comfort labels. This
+application is independent and is not endorsed by Open-Meteo.
+
+================================================================================
+3. GeoNames (via the Open-Meteo Geocoding API)
+================================================================================
+Name: GeoNames
+Usage: Place names used by the Open-Meteo Geocoding API, which Fairweather
+    queries for the search feature outside Taiwan
+Website: https://www.geonames.org/
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+    https://creativecommons.org/licenses/by/4.0/

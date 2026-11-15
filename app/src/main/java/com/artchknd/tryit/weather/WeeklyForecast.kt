@@ -10,11 +10,12 @@ import java.net.URLEncoder
 data class DailyForecast(
     val date: String,        // yyyy-MM-dd
     val condition: String,
-    val rainChance: Int?,    // 3 天以後為 null
+    val rainChance: Int?,    // 台灣 3 天以後為 null
     val minTemp: Int,
     val maxTemp: Int,
     val uvIndex: Int?,       // 當天只剩夜間時段時為 null
-    val conditionCode: Int? = null  // CWA WeatherCode，用於多語系顯示
+    val conditionCode: Int? = null,  // CWA WeatherCode，用於多語系顯示（台灣資料）
+    val wmoCode: Int? = null         // WMO 天氣代碼（境外資料）
 )
 
 private typealias Series = List<Pair<String, String>>

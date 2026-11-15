@@ -29,11 +29,13 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.artchknd.tryit.R
 import com.artchknd.tryit.ui.theme.FairweatherTheme
 import com.artchknd.tryit.ui.theme.ThemePreference
+import com.artchknd.tryit.weather.DataSource
 import com.artchknd.tryit.weather.LocationStatus
 
 private const val LIQUID_GLASS_REPO_URL = "https://github.com/Kyant0/AndroidLiquidGlass"
@@ -45,8 +47,9 @@ fun SettingsSection(
     onSelectTheme: (ThemePreference) -> Unit,
     locationStatus: LocationStatus,
     onRequestPermission: () -> Unit,
-    onOpenLicenses: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    dataSource: DataSource = DataSource.TAIWAN_CWA,
+    onOpenLicenses: () -> Unit = {}
 ) {
     val colors = FairweatherTheme.colors
     val uriHandler = LocalUriHandler.current
@@ -55,6 +58,10 @@ fun SettingsSection(
         stringResource(R.string.settings_permission_denied_action)
     } else {
         stringResource(R.string.settings_permission_granted)
+    }
+    val dataSourceText = when (dataSource) {
+        DataSource.TAIWAN_CWA -> stringResource(R.string.settings_value_data_source_cwa)
+        DataSource.OPEN_METEO -> stringResource(R.string.settings_value_data_source_open_meteo)
     }
 
     Column(
@@ -72,7 +79,6 @@ fun SettingsSection(
 
         Spacer(Modifier.height(4.dp))
 
-        // 一般設定
         SettingsGroupHeader(title = stringResource(R.string.settings_group_general))
 
         ThemeSelectorBlock(
@@ -91,7 +97,7 @@ fun SettingsSection(
 
         SettingsItemRow(
             title = stringResource(R.string.settings_item_data_source),
-            value = stringResource(R.string.settings_value_data_source_cwa)
+            value = dataSourceText
         )
 
         SettingsItemDivider()
@@ -103,7 +109,6 @@ fun SettingsSection(
 
         Spacer(Modifier.height(8.dp))
 
-        // 權限狀態與說明
         SettingsGroupHeader(title = stringResource(R.string.settings_group_permissions))
 
         SettingsItemRow(
@@ -122,7 +127,6 @@ fun SettingsSection(
 
         Spacer(Modifier.height(8.dp))
 
-        // 開發者名單、引用庫、開源授權與版權聲明
         SettingsGroupHeader(title = stringResource(R.string.settings_group_about))
 
         SettingsItemRow(
@@ -350,13 +354,17 @@ private fun SettingsItemRow(
             text = title,
             color = colors.textPrimary,
             fontSize = 15.sp,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(end = 12.dp)
         )
         Text(
             text = value,
             color = valueColor,
             fontSize = 14.sp,
-            textAlign = TextAlign.End
+            textAlign = TextAlign.End,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false)
         )
     }
 }

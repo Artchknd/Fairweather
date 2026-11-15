@@ -25,9 +25,17 @@ import androidx.compose.ui.unit.dp
 fun WeatherBackdrop(
     condition: String,
     isDark: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    conditionCode: Int? = null,
+    wmoCode: Int? = null,
+    isDay: Boolean = true
 ) {
-    val kind = weatherIconFor(condition)
+    val kind = weatherIconFor(
+        condition = condition,
+        conditionCode = conditionCode,
+        wmoCode = wmoCode,
+        isDay = isDay
+    )
     val transition = rememberInfiniteTransition(label = "weatherBackdrop")
 
     val drift by transition.animateFloat(
@@ -40,51 +48,76 @@ fun WeatherBackdrop(
         label = "cloudDrift"
     )
 
-    val rainCycle by transition.animateFloat(
+    val precipCycle by transition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1100, easing = LinearEasing),
+            animation = tween(
+                durationMillis = if (kind == WeatherIconType.SNOWY) 3600 else 1100,
+                easing = LinearEasing
+            ),
             repeatMode = RepeatMode.Restart
         ),
-        label = "rainCycle"
+        label = "precipCycle"
     )
 
-    val skyColors = backdropColors(kind, isDark)
+    val useNightPalette = isDark || !isDay
+    val skyColors = backdropColors(kind, useNightPalette)
     val atmosphereBlur = if (kind == WeatherIconType.FOGGY) 26.dp else 18.dp
 
     Box(modifier = modifier.fillMaxSize()) {
-        // 底層漸層天空
         Box(
             Modifier
                 .fillMaxSize()
                 .background(Brush.verticalGradient(skyColors))
         )
 
-        // 中層柔和雲朵／陽光暈／霧氣（透過 minSdk 31 原生 blur 做出自然大氣感）
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
                 .blur(atmosphereBlur)
         ) {
             when (kind) {
-                WeatherIconType.SUNNY -> drawSunnyAtmosphere(isDark, drift)
+                WeatherIconType.SUNNY -> drawSunnyAtmosphere(useNightPalette, drift)
+                WeatherIconType.CLEAR_NIGHT -> drawNightAtmosphere(drift)
                 WeatherIconType.PARTLY_CLOUDY -> {
-                    drawSunnyAtmosphere(isDark, drift)
-                    drawDriftingClouds(isDark, drift, densityFactor = 0.75f)
+                    drawSunnyAtmosphere(useNightPalette, drift)
+                    drawDriftingClouds(useNightPalette, drift, densityFactor = 0.75f)
                 }
-                WeatherIconType.CLOUDY -> drawDriftingClouds(isDark, drift, densityFactor = 1.1f)
-                WeatherIconType.RAINY, WeatherIconType.THUNDERSTORM -> {
-                    drawDriftingClouds(isDark, drift, densityFactor = 1.0f, stormy = true)
+                WeatherIconType.PARTLY_CLOUDY_NIGHT -> {
+                    drawNightAtmosphere(drift)
+                    drawDriftingClouds(useNightPalette, drift, densityFactor = 0.75f)
                 }
-                WeatherIconType.FOGGY -> drawFogBands(isDark, drift)
+                WeatherIconType.CLOUDY -> drawDriftingClouds(useNightPalette, drift, densityFactor = 1.1f)
+                WeatherIconType.DRIZZLE,
+                WeatherIconType.RAINY,
+                WeatherIconType.THUNDERSTORM -> {
+                    drawDriftingClouds(useNightPalette, drift, densityFactor = 1.0f, stormy = true)
+                }
+                WeatherIconType.SNOWY -> drawDriftingClouds(useNightPalette, drift, densityFactor = 0.9f)
+                WeatherIconType.FOGGY -> drawFogBands(useNightPalette, drift)
             }
         }
 
-        // 前層雨絲（不模糊，保持雨滴線條感與玻璃折射層次）
-        if (kind == WeatherIconType.RAINY || kind == WeatherIconType.THUNDERSTORM) {
+        if (kind == WeatherIconType.CLEAR_NIGHT || kind == WeatherIconType.PARTLY_CLOUDY_NIGHT) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                drawRainStreaks(isDark, rainCycle)
+                drawNightStars()
+            }
+        }
+
+        if (kind == WeatherIconType.DRIZZLE || kind == WeatherIconType.RAINY || kind == WeatherIconType.THUNDERSTORM) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                drawRainStreaks(
+                    isDark = useNightPalette,
+                    cycle = precipCycle,
+                    lightDrizzle = kind == WeatherIconType.DRIZZLE
+                )
+            }
+        }
+
+        if (kind == WeatherIconType.SNOWY) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                drawSnowParticles(useNightPalette, precipCycle)
             }
         }
     }
@@ -93,17 +126,22 @@ fun WeatherBackdrop(
 private fun backdropColors(kind: WeatherIconType, isDark: Boolean): List<Color> {
     if (isDark) {
         return when (kind) {
-            WeatherIconType.SUNNY -> listOf(
+            WeatherIconType.SUNNY, WeatherIconType.CLEAR_NIGHT -> listOf(
                 Color(0xFF070F26), Color(0xFF132652), Color(0xFF1F3B73)
             )
-            WeatherIconType.PARTLY_CLOUDY -> listOf(
+            WeatherIconType.PARTLY_CLOUDY, WeatherIconType.PARTLY_CLOUDY_NIGHT -> listOf(
                 Color(0xFF0C1830), Color(0xFF1C2D4A), Color(0xFF2B4162)
             )
             WeatherIconType.CLOUDY -> listOf(
                 Color(0xFF141E2E), Color(0xFF233044), Color(0xFF324158)
             )
-            WeatherIconType.RAINY, WeatherIconType.THUNDERSTORM -> listOf(
+            WeatherIconType.DRIZZLE,
+            WeatherIconType.RAINY,
+            WeatherIconType.THUNDERSTORM -> listOf(
                 Color(0xFF09111F), Color(0xFF162338), Color(0xFF21314A)
+            )
+            WeatherIconType.SNOWY -> listOf(
+                Color(0xFF142033), Color(0xFF22334D), Color(0xFF334966)
             )
             WeatherIconType.FOGGY -> listOf(
                 Color(0xFF19222D), Color(0xFF293544), Color(0xFF3B495B)
@@ -114,14 +152,22 @@ private fun backdropColors(kind: WeatherIconType, isDark: Boolean): List<Color> 
         WeatherIconType.SUNNY -> listOf(
             Color(0xFF3B95F2), Color(0xFF6EC0FC), Color(0xFFAEE2FF)
         )
+        WeatherIconType.CLEAR_NIGHT, WeatherIconType.PARTLY_CLOUDY_NIGHT -> listOf(
+            Color(0xFF0B1530), Color(0xFF182A52), Color(0xFF294172)
+        )
         WeatherIconType.PARTLY_CLOUDY -> listOf(
             Color(0xFF5195D9), Color(0xFF83B8E8), Color(0xFFBBD9F5)
         )
         WeatherIconType.CLOUDY -> listOf(
             Color(0xFF6B849E), Color(0xFF93AABF), Color(0xFFBDCAD8)
         )
-        WeatherIconType.RAINY, WeatherIconType.THUNDERSTORM -> listOf(
+        WeatherIconType.DRIZZLE,
+        WeatherIconType.RAINY,
+        WeatherIconType.THUNDERSTORM -> listOf(
             Color(0xFF475C72), Color(0xFF677E94), Color(0xFF8A9FB2)
+        )
+        WeatherIconType.SNOWY -> listOf(
+            Color(0xFF6C8AA8), Color(0xFF9BB4CC), Color(0xFFD2E0EC)
         )
         WeatherIconType.FOGGY -> listOf(
             Color(0xFFB3C2D1), Color(0xFFD0DBE6), Color(0xFFE8EEF4)
@@ -147,6 +193,40 @@ private fun DrawScope.drawSunnyAtmosphere(isDark: Boolean, drift: Float) {
         radius = glowRadius,
         center = sunCenter
     )
+}
+
+private fun DrawScope.drawNightAtmosphere(drift: Float) {
+    val moonCenter = Offset(
+        x = size.width * (0.80f - drift * 0.03f),
+        y = size.height * 0.16f
+    )
+    val glowRadius = size.minDimension * 0.55f
+    drawCircle(
+        brush = Brush.radialGradient(
+            colors = listOf(
+                Color(0xFFE2E8F0).copy(alpha = 0.22f),
+                Color(0xFF93C5FD).copy(alpha = 0.08f),
+                Color.Transparent
+            ),
+            center = moonCenter,
+            radius = glowRadius
+        ),
+        radius = glowRadius,
+        center = moonCenter
+    )
+}
+
+private fun DrawScope.drawNightStars() {
+    val starColor = Color.White.copy(alpha = 0.45f)
+    val positions = listOf(
+        0.14f to 0.12f, 0.28f to 0.08f, 0.46f to 0.15f,
+        0.62f to 0.09f, 0.18f to 0.26f, 0.38f to 0.22f,
+        0.72f to 0.27f, 0.88f to 0.10f, 0.54f to 0.32f
+    )
+    positions.forEachIndexed { idx, (xr, yr) ->
+        val r = if (idx % 3 == 0) 2.6f else 1.8f
+        drawCircle(color = starColor, radius = r, center = Offset(size.width * xr, size.height * yr))
+    }
 }
 
 private fun DrawScope.drawDriftingClouds(
@@ -204,15 +284,15 @@ private fun DrawScope.drawFogBands(isDark: Boolean, drift: Float) {
     }
 }
 
-private fun DrawScope.drawRainStreaks(isDark: Boolean, cycle: Float) {
+private fun DrawScope.drawRainStreaks(isDark: Boolean, cycle: Float, lightDrizzle: Boolean) {
     val dropColor = if (isDark) {
-        Color(0xFFBAE6FD).copy(alpha = 0.24f)
+        Color(0xFFBAE6FD).copy(alpha = if (lightDrizzle) 0.16f else 0.24f)
     } else {
-        Color.White.copy(alpha = 0.38f)
+        Color.White.copy(alpha = if (lightDrizzle) 0.28f else 0.38f)
     }
-    val columns = 26
-    val slantX = -size.width * 0.05f
-    val streakLen = size.height * 0.06f
+    val columns = if (lightDrizzle) 18 else 26
+    val slantX = -size.width * (if (lightDrizzle) 0.025f else 0.05f)
+    val streakLen = size.height * (if (lightDrizzle) 0.032f else 0.06f)
 
     for (i in 0 until columns) {
         val seedOffset = (i * 0.37f) % 1f
@@ -224,8 +304,22 @@ private fun DrawScope.drawRainStreaks(isDark: Boolean, cycle: Float) {
             color = dropColor,
             start = Offset(x, startY),
             end = Offset(x + slantX, startY + streakLen),
-            strokeWidth = 2.2f,
+            strokeWidth = if (lightDrizzle) 1.6f else 2.2f,
             cap = StrokeCap.Round
         )
+    }
+}
+
+private fun DrawScope.drawSnowParticles(isDark: Boolean, cycle: Float) {
+    val snowColor = Color.White.copy(alpha = if (isDark) 0.42f else 0.65f)
+    val columns = 20
+    for (i in 0 until columns) {
+        val seedOffset = (i * 0.43f) % 1f
+        val yProgress = (cycle + seedOffset) % 1f
+        val sway = kotlin.math.sin((yProgress * 2f * Math.PI + i).toDouble()).toFloat() * 14f
+        val x = size.width * ((i + 0.5f) / columns) + sway
+        val y = -16f + yProgress * (size.height + 32f)
+        val r = if (i % 3 == 0) 4.2f else 2.8f
+        drawCircle(color = snowColor, radius = r, center = Offset(x, y))
     }
 }

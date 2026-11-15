@@ -3,3 +3,8 @@ Copyright 2026 Artchknd
 
 This product includes software developed by third parties.
 See THIRD_PARTY_NOTICES.md for details.
+
+Weather data outside Taiwan is provided by Open-Meteo.com (https://open-meteo.com/),
+licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/).
+Place search outside Taiwan uses the Open-Meteo Geocoding API, which is built on
+GeoNames data (https://www.geonames.org/, CC BY 4.0).

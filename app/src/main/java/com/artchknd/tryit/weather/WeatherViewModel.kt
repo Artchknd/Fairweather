@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.artchknd.tryit.R
 import com.artchknd.tryit.location.LocationResolver
 import com.artchknd.tryit.location.LocationResult
+import com.artchknd.tryit.weather.global.GlobalWeatherSource
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -24,12 +25,29 @@ import java.net.UnknownHostException
 private const val MAX_PINS = 10
 private const val PINNED_STALE_MS = 5 * 60 * 1000L
 
+// 台灣鄉鎮名稱只有中文；沒有中文字的查詢不需要呼叫 CWA
+private fun containsCjk(text: String): Boolean = text.any { it.code in 0x4E00..0x9FFF }
+
+private fun DailyForecast.toPlaceForecast(key: PlaceKey): PlaceForecast = PlaceForecast(
+    county = key.county,
+    district = key.district,
+    condition = condition,
+    minTemp = minTemp,
+    maxTemp = maxTemp,
+    rainChance = rainChance
+)
+
 class WeatherViewModel(application: Application) : AndroidViewModel(application) {
 
+    // 台灣（CWA）
     private val repo = WeatherRepository()
     private val weeklyRepo = WeeklyRepository()
-    private val resolver = LocationResolver(application)
     private val searchRepo = PlaceSearchRepository(application, weeklyRepo)
+
+    // 境外（Open-Meteo），與上面完全獨立
+    private val globalSource = GlobalWeatherSource(application)
+
+    private val resolver = LocationResolver(application)
     private val pinnedStore = PinnedStore(application)
 
     private val _state = MutableStateFlow(WeatherUiState())
@@ -65,13 +83,11 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
             _state.update { it.copy(isLoading = true, error = null) }
             when (val location = resolver.resolve()) {
                 is LocationResult.Success -> loadWeather(location.county, location.district)
+                is LocationResult.OutsideTaiwan ->
+                    loadGlobalWeather(location.latitude, location.longitude)
                 LocationResult.PermissionDenied -> _state.value = WeatherUiState(
                     isLoading = false,
                     locationStatus = LocationStatus.PERMISSION_REQUIRED
-                )
-                LocationResult.OutsideTaiwan -> _state.value = WeatherUiState(
-                    isLoading = false,
-                    locationStatus = LocationStatus.UNSUPPORTED_REGION
                 )
                 LocationResult.LocationUnavailable ->
                     showError(getApplication<Application>().getString(R.string.error_location_unavailable))
@@ -86,32 +102,47 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
         if (_state.value.locationStatus != LocationStatus.OK) refresh()
     }
 
-    /** 搜尋指定地區的天氣，對應畫面的 onSearch。 */
+    /**
+     * 搜尋指定地區的天氣，對應畫面的 onSearch。
+     * 台灣（中文查詢）與境外同時搜尋，結果合併：台灣在前、境外在後。
+     */
     fun searchLocation(query: String) {
         val text = query.trim()
         if (text.isEmpty()) return
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
             _search.value = SearchUiState(isSearching = true)
-            searchRepo.search(text)
-                .onSuccess { list -> _search.value = SearchUiState(results = list) }
-                .onFailure { e ->
-                    val msg = when {
-                        e is UnknownHostException -> getApplication<Application>().getString(R.string.error_network_unavailable)
-                        e.message?.startsWith("HTTP 401") == true -> getApplication<Application>().getString(R.string.error_invalid_api_key)
-                        else -> getApplication<Application>().getString(R.string.error_search_failed)
-                    }
-                    _search.value = SearchUiState(error = msg)
+            val chinese = containsCjk(text)
+            val (taiwan, global) = coroutineScope {
+                val tw = async {
+                    if (chinese) searchRepo.search(text)
+                    else Result.success(emptyList<PlaceForecast>())
+                }
+                // 中文查詢的台灣結果由 CWA 負責，境外搜尋略過台灣，避免同一地點出現兩個資料源
+                val gl = async { globalSource.search(text, excludeTaiwan = chinese) }
+                tw.await() to gl.await()
+            }
+            val results = taiwan.getOrDefault(emptyList()) + global.getOrDefault(emptyList())
+            val failure = taiwan.exceptionOrNull() ?: global.exceptionOrNull()
+            _search.value =
+                if (results.isEmpty() && failure != null) {
+                    SearchUiState(error = errorMessage(failure, R.string.error_search_failed))
+                } else {
+                    SearchUiState(results = results)
                 }
         }
     }
 
-    /** 固定或取消固定，對應畫面的 onTogglePin。以「縣市|鄉鎮」判斷是否已固定。 */
+    /**
+     * 固定或取消固定，對應畫面的 onTogglePin。
+     * 以「縣市|鄉鎮」（境外為「地名|標示」）判斷是否已固定，畫面端的呼叫方式不變；
+     * 境外項目的座標從搜尋結果帶入。
+     */
     fun togglePin(county: String, district: String) {
-        val key = PlaceKey(county, district)
         val current = _pinned.value
-        if (current.any { it.key == key }) {
-            _pinned.value = current.filterNot { it.key == key }
+        val exists = current.any { it.county == county && it.district == district }
+        if (exists) {
+            _pinned.value = current.filterNot { it.county == county && it.district == district }
         } else {
             if (current.size >= MAX_PINS) {
                 _messages.tryEmit(
@@ -119,9 +150,10 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
                 )
                 return
             }
-            // 從搜尋結果固定時直接帶入已有的預報，不必再請求一次
-            val item = _search.value.results.firstOrNull { it.key == key }
-            _pinned.value = current + (item ?: PlaceForecast.placeholder(key))
+            // 從搜尋結果固定時直接帶入已有的預報（含座標），不必再請求一次
+            val item = _search.value.results
+                .firstOrNull { it.county == county && it.district == district }
+            _pinned.value = current + (item ?: PlaceForecast.placeholder(PlaceKey(county, district)))
             if (item == null) refreshPinned()
         }
         pinnedStore.save(_pinned.value.map { it.key })
@@ -134,17 +166,21 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
         pinnedRefreshedAt = System.currentTimeMillis()
         pinnedJob?.cancel()
         pinnedJob = viewModelScope.launch {
-            val fetched = coroutineScope {
-                keys.map { key ->
+            val updates: Map<PlaceKey, PlaceForecast> = coroutineScope {
+                // 境外的固定地區一次請求全部取回
+                val globalDeferred = async { globalSource.summaries(keys.filter { it.isGlobal }) }
+                val taiwanDeferred = keys.filterNot { it.isGlobal }.map { key ->
                     async {
-                        key to weeklyRepo.getWeekly(key.county, key.district)
+                        weeklyRepo.getWeekly(key.county, key.district)
                             .getOrNull()?.firstOrNull()
+                            ?.let { today -> key to today.toPlaceForecast(key) }
                     }
-                }.awaitAll()
+                }
+                taiwanDeferred.awaitAll().filterNotNull().toMap() + globalDeferred.await()
             }
             _pinned.update { list ->
                 list.map { item ->
-                    val today = fetched.firstOrNull { it.first == item.key }?.second
+                    val today = updates[item.key]
                     if (today == null) item else item.copy(
                         condition = today.condition,
                         minTemp = today.minTemp,
@@ -171,7 +207,11 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
                 _state.update { old ->
                     // 同一個地點才保留上一次的週預報；換了地點就清掉
                     val sameSpot = old.city == ui.city && old.district == district
-                    ui.copy(district = district, daily = if (sameSpot) old.daily else emptyList())
+                    ui.copy(
+                        district = district,
+                        daily = if (sameSpot) old.daily else emptyList(),
+                        source = DataSource.TAIWAN_CWA
+                    )
                 }
                 // 週預報失敗不影響主畫面，維持原本的清單
                 weeklyDeferred.await().onSuccess { weekly ->
@@ -180,13 +220,23 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
             }
             .onFailure { e ->
                 weeklyDeferred.cancel()
-                val msg = when {
-                    e is UnknownHostException -> getApplication<Application>().getString(R.string.error_network_unavailable)
-                    e.message?.startsWith("HTTP 401") == true -> getApplication<Application>().getString(R.string.error_invalid_api_key)
-                    else -> getApplication<Application>().getString(R.string.error_weather_fetch_failed)
-                }
-                showError(msg)
+                showError(errorMessage(e, R.string.error_weather_fetch_failed))
             }
+    }
+
+    private suspend fun loadGlobalWeather(latitude: Double, longitude: Double) {
+        globalSource.load(latitude, longitude)
+            .onSuccess { ui -> _state.value = ui }
+            .onFailure { e -> showError(errorMessage(e, R.string.error_weather_fetch_failed)) }
+    }
+
+    private fun errorMessage(e: Throwable, @StringRes fallback: Int): String {
+        val app = getApplication<Application>()
+        return when {
+            e is UnknownHostException -> app.getString(R.string.error_network_unavailable)
+            e.message?.startsWith("HTTP 401") == true -> app.getString(R.string.error_invalid_api_key)
+            else -> app.getString(fallback)
+        }
     }
 
     private fun showError(message: String) {

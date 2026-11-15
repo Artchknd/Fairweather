@@ -49,8 +49,10 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -74,6 +76,7 @@ import com.artchknd.tryit.ui.settings.LicensesScreen
 import com.artchknd.tryit.ui.theme.FairweatherTheme
 import com.artchknd.tryit.ui.theme.ThemePreference
 import com.artchknd.tryit.weather.DailyForecast
+import com.artchknd.tryit.weather.DataSource
 import com.artchknd.tryit.weather.ForecastSlot
 import com.artchknd.tryit.weather.LocationStatus
 import com.artchknd.tryit.weather.WeatherUiState
@@ -84,6 +87,7 @@ import java.time.LocalDate
 
 private const val UI_PREFS_NAME = "fairweather_ui_prefs"
 private const val KEY_THEME_PREFERENCE = "theme_preference"
+private const val OPEN_METEO_URL = "https://open-meteo.com/"
 
 @Composable
 fun MainScreen(
@@ -168,11 +172,13 @@ fun MainScreen(
                 ) {
                     WeatherBackdrop(
                         condition = state.condition,
-                        isDark = colors.isDark
+                        isDark = colors.isDark,
+                        conditionCode = state.conditionCode,
+                        wmoCode = state.wmoCode,
+                        isDay = state.isDay
                     )
                 }
 
-                // 預先建立並常駐所有分頁，切換時只做 graphicsLayer 動畫，避免首次點擊分頁重組卡頓
                 ProvideLiquidBackdrop(skyBackdrop) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         Box(
@@ -259,6 +265,7 @@ fun MainScreen(
                                             },
                                             locationStatus = state.locationStatus,
                                             onRequestPermission = onRequestPermission,
+                                            dataSource = state.source,
                                             onOpenLicenses = { showLicenses = true }
                                         )
                                         Spacer(Modifier.height(116.dp))
@@ -267,7 +274,6 @@ fun MainScreen(
                             }
                         }
 
-                        // 開源授權子頁：點擊設定頁「開源授權」進入，系統返回鍵或頂部返回按鈕皆可回到設定頁
                         AnimatedVisibility(
                             visible = showLicenses,
                             enter = slideInHorizontally(
@@ -391,7 +397,6 @@ private fun PrewarmedTabHost(
             ) {
                 content(tab)
 
-                // 停用未選中分頁的點擊攔截，避免滑出瞬間或背景殘留頁收到誤觸
                 if (!isSelected) {
                     Box(
                         modifier = Modifier
@@ -498,6 +503,7 @@ private fun HomeTabContent(
 
                 else -> {
                     val pullState = rememberPullToRefreshState()
+                    val uriHandler = LocalUriHandler.current
 
                     Column(
                         modifier = Modifier
@@ -549,6 +555,23 @@ private fun HomeTabContent(
                                         daily = state.daily,
                                         todayMinTemp = state.minTemp,
                                         todayMaxTemp = state.maxTemp
+                                    )
+                                }
+
+                                if (state.source == DataSource.OPEN_METEO) {
+                                    Text(
+                                        text = stringResource(R.string.open_meteo_attribution),
+                                        color = colors.textMuted,
+                                        fontSize = 12.sp,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = null,
+                                                onClick = { uriHandler.openUri(OPEN_METEO_URL) }
+                                            )
+                                            .padding(top = 4.dp)
                                     )
                                 }
 
@@ -687,6 +710,53 @@ private fun MainScreenSuccessPreview() {
                 rainChance = 50
             )
         )
+    )
+}
+
+@Preview(showBackground = true, name = "Global Night - Open-Meteo")
+@Composable
+private fun MainScreenGlobalNightPreview() {
+    val today = LocalDate.now()
+    MainScreen(
+        state = WeatherUiState(
+            city = "Tokyo",
+            district = "Shinjuku, Japan",
+            tempNow = 14,
+            feelsLike = 12,
+            condition = "Clear sky",
+            rainChance = 5,
+            minTemp = 11,
+            maxTemp = 18,
+            wmoCode = 0,
+            isDay = false,
+            source = DataSource.OPEN_METEO,
+            slots = listOf(
+                ForecastSlot(
+                    start = "$today 18:00:00",
+                    end = "${today.plusDays(1)} 06:00:00",
+                    condition = "Clear sky",
+                    rainChance = 5,
+                    minTemp = 11,
+                    maxTemp = 15,
+                    comfort = "舒適",
+                    wmoCode = 0
+                )
+            ),
+            daily = listOf(
+                DailyForecast(
+                    date = today.toString(),
+                    condition = "Clear sky",
+                    rainChance = 5,
+                    minTemp = 11,
+                    maxTemp = 18,
+                    uvIndex = 4,
+                    wmoCode = 0
+                )
+            ),
+            isLoading = false
+        ),
+        onRetry = {},
+        onRequestPermission = {}
     )
 }
 

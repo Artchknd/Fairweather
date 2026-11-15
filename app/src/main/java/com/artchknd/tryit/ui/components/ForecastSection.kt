@@ -106,7 +106,10 @@ private fun ForecastRow(slot: ForecastSlot) {
             WeatherIcon(
                 condition = slot.condition,
                 tint = colors.iconTint,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(24.dp),
+                conditionCode = slot.conditionCode,
+                wmoCode = slot.wmoCode,
+                isDay = true
             )
             Spacer(Modifier.width(8.dp))
             Column {
@@ -117,8 +120,9 @@ private fun ForecastRow(slot: ForecastSlot) {
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
+                val rainLabel = stringResource(R.string.forecast_rain_label, rainStr)
                 val subInfo = buildString {
-                    append(context.getString(R.string.forecast_rain_label, rainStr))
+                    append(rainLabel)
                     val comfortText = WeatherText.comfort(context, slot.comfort)
                     if (comfortText.isNotBlank()) append(" · $comfortText")
                 }

@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.artchknd.tryit.R
@@ -149,7 +150,8 @@ private fun PinnedLocationRow(
                 color = colors.textPrimary,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 WeatherIcon(
@@ -177,7 +179,8 @@ private fun PinnedLocationRow(
                     text = stringResource(R.string.weather_rain_prob_short, rainStr),
                     color = colors.textMuted,
                     fontSize = 12.sp,
-                    maxLines = 1
+                    maxLines = 1,
+                    softWrap = false
                 )
             }
         }
@@ -187,6 +190,8 @@ private fun PinnedLocationRow(
             color = colors.textPrimary,
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            softWrap = false,
             modifier = Modifier.padding(end = 12.dp)
         )
 
