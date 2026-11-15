@@ -5,8 +5,9 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-// Read the CWA key from local.properties (git-ignored), falling back to an
-// environment variable (useful for CI). Empty when neither is set.
+// Read optional settings from local.properties (git-ignored). The CWA key
+// falls back to an environment variable (useful for CI) and is empty when
+// neither is set. Only debug builds ever embed the key; release builds never do.
 val localProps = Properties().apply {
     val f = rootProject.file("local.properties")
     if (f.exists()) f.inputStream().use { load(it) }
@@ -17,17 +18,17 @@ val cwaApiKey: String = (localProps.getProperty("CWA_API_KEY")
     ?: "")
     .trim()
 
-if (cwaApiKey.isEmpty()) {
-    logger.warn(
-        "CWA_API_KEY is not set. Copy local.properties.example to " +
-                "local.properties and fill in your key; the app will show " +
-                "a missing-key message until then."
-    )
-}
+// Escape so a value is always a valid Java string literal in BuildConfig.
+fun javaLiteral(value: String): String =
+    "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
-// Escape so the value is always a valid Java string literal in BuildConfig.
-val cwaApiKeyLiteral: String = "\"" +
-        cwaApiKey.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+val cwaApiKeyLiteral: String = javaLiteral(cwaApiKey)
+
+// Base URL of the proxy that holds the CWA key server-side.
+val proxyBaseUrl: String = (localProps.getProperty("PROXY_BASE_URL")
+    ?: "https://fairweather-proxy.vercel.app")
+    .trim()
+val proxyBaseUrlLiteral: String = javaLiteral(proxyBaseUrl)
 
 android {
     namespace = "com.artchknd.tryit"
@@ -46,11 +47,17 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "CWA_API_KEY", cwaApiKeyLiteral)
+        buildConfigField("String", "PROXY_BASE_URL", proxyBaseUrlLiteral)
     }
 
     buildTypes {
+        debug {
+            // Debug builds may call CWA directly when a key is configured.
+            buildConfigField("String", "CWA_API_KEY", cwaApiKeyLiteral)
+        }
         release {
+            // Release builds never embed a key; they go through the proxy.
+            buildConfigField("String", "CWA_API_KEY", "\"\"")
             optimization {
                 enable = false
             }

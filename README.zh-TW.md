@@ -26,11 +26,11 @@
 
 - Android 12（API 31）以上
 - Android Studio（目前穩定版）
-- 中央氣象署開放資料平臺的免費 API 授權碼
+- 選用：中央氣象署開放資料平臺的免費 API 授權碼（debug 建置可直接連氣象署）
 
 ## 從原始碼建置
 
-1. 申請授權碼：到 <https://opendata.cwa.gov.tw/> 註冊並複製你的授權碼。
+1. 選用：申請授權碼。到 <https://opendata.cwa.gov.tw/> 註冊並複製你的授權碼。
 2. 下載專案：
 
    ```
@@ -38,7 +38,7 @@
    cd Fairweather
    ```
 
-3. 由範本建立 `local.properties` 並填入授權碼：
+3. 選用：由範本建立 `local.properties` 並設定授權碼：
 
    ```
    cp local.properties.example local.properties
@@ -50,18 +50,20 @@
    CWA_API_KEY=your_key_here
    ```
 
-   `local.properties` 已加入 `.gitignore`，不會被提交。也可以改設定環境變數 `CWA_API_KEY`，在檔案沒有該欄位時會使用它。
+   `local.properties` 已加入 `.gitignore`，不會被提交。也可以改設定環境變數 `CWA_API_KEY`，在檔案沒有該欄位時會使用它。授權碼只會用在 debug 建置。
 4. 用 Android Studio 開啟專案並執行 `app`，或用命令列建置：
 
    ```
    ./gradlew assembleDebug
    ```
 
-沒有設定授權碼時專案仍可編譯，App 會顯示「未設定 `CWA_API_KEY`」的說明訊息。
+不設定授權碼也可以：App 會改用專案的公開代理，所以下載後可以直接編譯並執行。
 
-### 關於 API 授權碼
+### 關於 API 授權碼與代理
 
-授權碼會透過 `BuildConfig` 編進 App，任何拿到 APK 的人都能把它取出來。請不要把它提交到 Git，也不要公開發佈內含你不願更換的授權碼的 APK。每位貢獻者請使用自己的授權碼。
+編進 APK 的授權碼，任何拿到 APK 的人都能取出，所以 release 建置**不會**包含授權碼。它們改呼叫一個小型代理 [fairweather-proxy](https://github.com/Artchknd/fairweather-proxy)（Vercel 函式）：授權碼保存在伺服器端，只放行 App 用到的預報資料集，並快取回應。
+
+debug 建置在設定了 `CWA_API_KEY` 時直接呼叫氣象署，沒有設定則走代理。用你的授權碼建出的 debug APK 內含該授權碼，請不要分享。要改用自己的代理，請部署 `fairweather-proxy`、在 Vercel 環境變數設定 `CWA_API_KEY`，並在 `local.properties` 加上 `PROXY_BASE_URL=https://your-proxy.vercel.app`。請勿提交你的授權碼。
 
 ## 專案結構
 

@@ -1,3 +1,6 @@
-# Copy this file to local.properties and fill in your key.
-# Get a free key at https://opendata.cwa.gov.tw/
-CWA_API_KEY=your_key_here
+# Optional. A free key from https://opendata.cwa.gov.tw/ lets debug builds
+# call CWA directly. Without it, the app uses the public proxy.
+# CWA_API_KEY=your_key_here
+
+# Optional. Use your own proxy instead of the default one.
+# PROXY_BASE_URL=https://your-proxy.vercel.app

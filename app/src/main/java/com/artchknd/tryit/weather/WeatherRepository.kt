@@ -1,18 +1,14 @@
 package com.artchknd.tryit.weather
 
-import com.artchknd.tryit.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
-import java.net.URL
 import java.net.URLEncoder
 
-class WeatherRepository(
-    private val apiKey: String = BuildConfig.CWA_API_KEY
-) {
+class WeatherRepository {
 
     suspend fun getForecast(county: String): Result<WeatherUiState> =
         withContext(Dispatchers.IO) {
@@ -20,12 +16,8 @@ class WeatherRepository(
         }
 
     private fun fetch(county: String): String {
-        if (apiKey.isBlank()) throw IOException("missing api key")
         val q = URLEncoder.encode(county, "UTF-8")
-        val url = URL(
-            "https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-C0032-001" +
-                    "?Authorization=$apiKey&locationName=$q"
-        )
+        val url = CwaEndpoint.build("F-C0032-001", "locationName=$q")
         val conn = url.openConnection() as HttpURLConnection
         try {
             conn.connectTimeout = 10_000

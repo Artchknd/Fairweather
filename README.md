@@ -26,11 +26,11 @@ English | [繁體中文](README.zh-TW.md)
 
 - Android 12 (API 31) or newer
 - Android Studio (current stable release)
-- A free API key from the Central Weather Administration (CWA) open data platform
+- Optional: a free API key from the Central Weather Administration (CWA) open data platform, for calling CWA directly in debug builds
 
 ## Build from source
 
-1. Get a key: register at <https://opendata.cwa.gov.tw/> and copy your authorization code.
+1. Optional: get a key. Register at <https://opendata.cwa.gov.tw/> and copy your authorization code.
 2. Clone the repository:
 
    ```
@@ -38,7 +38,7 @@ English | [繁體中文](README.zh-TW.md)
    cd Fairweather
    ```
 
-3. Create `local.properties` from the template and fill in your key:
+3. Optional: create `local.properties` from the template and set your key:
 
    ```
    cp local.properties.example local.properties
@@ -50,18 +50,20 @@ English | [繁體中文](README.zh-TW.md)
    CWA_API_KEY=your_key_here
    ```
 
-   `local.properties` is git-ignored. Alternatively, set a `CWA_API_KEY` environment variable, which is used when the property is missing.
+   `local.properties` is git-ignored. Alternatively, set a `CWA_API_KEY` environment variable, which is used when the property is missing. The key is used by debug builds only.
 4. Open the project in Android Studio and run the `app` configuration, or build from the command line:
 
    ```
    ./gradlew assembleDebug
    ```
 
-If no key is configured the project still builds, and the app shows a message explaining that `CWA_API_KEY` is not set.
+You can skip the key entirely: without one, the app falls back to the project's public proxy, so it builds and runs out of the box.
 
-### About the API key
+### About the API key and the proxy
 
-The key is compiled into the app through `BuildConfig`, so anyone who has your APK can extract it. Do not commit it, and do not publish an APK built with a key you are not willing to rotate. Every contributor is expected to use their own key.
+An API key compiled into an APK can be extracted by anyone who has the APK, so release builds never contain one. They call a small proxy, [fairweather-proxy](https://github.com/Artchknd/fairweather-proxy), a Vercel function that keeps the key on the server, only allows the forecast datasets the app uses, and caches responses.
+
+Debug builds call CWA directly when `CWA_API_KEY` is set, and use the proxy otherwise. A debug APK built with your key contains that key, so do not share it. To run against your own proxy, deploy `fairweather-proxy`, set `CWA_API_KEY` in its Vercel environment variables, and add `PROXY_BASE_URL=https://your-proxy.vercel.app` to `local.properties`. Never commit your key.
 
 ## Project structure
 

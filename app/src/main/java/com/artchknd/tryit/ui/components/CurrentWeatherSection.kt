@@ -1,5 +1,6 @@
 package com.artchknd.tryit.ui.components
 
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,15 +16,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.artchknd.tryit.R
 import com.artchknd.tryit.ui.theme.FairweatherTheme
-import com.artchknd.tryit.weather.WeatherText
 import com.artchknd.tryit.weather.WeatherUiState
 
 @Composable
@@ -34,11 +32,7 @@ fun CurrentWeatherHeader(
     modifier: Modifier = Modifier
 ) {
     val colors = FairweatherTheme.colors
-    val context = LocalContext.current
-    val locationText = formatHeaderLocation(
-        city = WeatherText.county(context, city),
-        district = district
-    )
+    val locationText = formatHeaderLocation(city = city, district = district)
 
     Row(
         modifier = modifier
@@ -60,8 +54,14 @@ fun CurrentWeatherHeader(
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 0.4.sp,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false)
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .basicMarquee(
+                        iterations = Int.MAX_VALUE,
+                        repeatDelayMillis = 1600,
+                        initialDelayMillis = 1000,
+                        velocity = 36.dp
+                    )
             )
             if (isLoading) {
                 Spacer(Modifier.width(10.dp))
@@ -84,14 +84,10 @@ fun CurrentWeatherSection(
     modifier: Modifier = Modifier
 ) {
     val colors = FairweatherTheme.colors
-    val context = LocalContext.current
     val minStr = state.minTemp?.toString() ?: "--"
     val maxStr = state.maxTemp?.toString() ?: "--"
     val rainStr = state.rainChance?.toString() ?: "--"
-    val comfort = WeatherText.comfort(
-        context,
-        state.slots.firstOrNull()?.comfort.orEmpty()
-    )
+    val comfort = state.slots.firstOrNull()?.comfort.orEmpty()
 
     Column(
         modifier = modifier
@@ -108,8 +104,7 @@ fun CurrentWeatherSection(
                 modifier = Modifier.size(32.dp)
             )
             Text(
-                text = WeatherText.condition(context, state.conditionCode, state.condition)
-                    .ifBlank { "--" },
+                text = state.condition.ifBlank { "--" },
                 color = colors.textSecondary,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Medium
@@ -126,7 +121,12 @@ fun CurrentWeatherSection(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = stringResource(R.string.weather_temp_rain_summary, maxStr, minStr, rainStr),
+                text = stringResource(
+                    R.string.weather_temp_rain_summary,
+                    maxStr,
+                    minStr,
+                    rainStr
+                ),
                 color = colors.textSecondary,
                 fontSize = 14.sp
             )
@@ -138,11 +138,11 @@ fun CurrentWeatherSection(
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.height(4.dp))
-            val detailLine = buildString {
-                append(stringResource(R.string.weather_range_rain_subtitle, rainStr))
-                if (comfort.isNotBlank()) {
-                    append("  ·  $comfort")
-                }
+            val rangeSubtitle = stringResource(R.string.weather_range_rain_subtitle, rainStr)
+            val detailLine = if (comfort.isNotBlank()) {
+                "$rangeSubtitle  ·  $comfort"
+            } else {
+                rangeSubtitle
             }
             Text(
                 text = detailLine,

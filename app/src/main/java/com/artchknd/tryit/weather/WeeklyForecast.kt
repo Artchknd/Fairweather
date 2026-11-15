@@ -1,12 +1,10 @@
 package com.artchknd.tryit.weather
 
-import com.artchknd.tryit.BuildConfig
 import com.artchknd.tryit.location.TaiwanRegions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
-import java.net.URL
 import java.net.URLEncoder
 
 data class DailyForecast(
@@ -71,10 +69,7 @@ class WeeklyRepository {
 
     private fun request(county: String, extraQuery: String): String {
         val dataset = TaiwanRegions.weeklyDatasetId(county) ?: error("unsupported county")
-        val url = URL(
-            "https://opendata.cwa.gov.tw/api/v1/rest/datastore/$dataset" +
-                    "?Authorization=${BuildConfig.CWA_API_KEY}&format=JSON$extraQuery"
-        )
+        val url = CwaEndpoint.build(dataset, "format=JSON$extraQuery")
         val conn = url.openConnection() as HttpURLConnection
         conn.connectTimeout = 10_000
         conn.readTimeout = 15_000
